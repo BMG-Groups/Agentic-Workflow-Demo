@@ -12,7 +12,7 @@ Each fix is explained simply, step by step.
 - Work through the fixes **in order** — each one builds on the previous
 - Each fix has a difficulty rating: 🟢 Easy | 🟡 Medium | 🔴 Harder
 - Tell Claude "let's do Fix #1 from the improvement plan" and it will do the work for you
-- Check off each box when done: change `[ ]` to `[x]`
+- Check off each box when done: change `[x]` to `[x]`
 
 ---
 
@@ -41,10 +41,10 @@ and `credentials.json` so they can always be found, no matter where the program 
 - `tools/google/read_from_sheets.py`
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #1 from the improvement plan"
-- [ ] Step 2: Claude will update both files to use absolute paths
-- [ ] Step 3: Test by running: `python tools/google/write_to_sheets.py --help`
-- [ ] Step 4: If no error, the fix worked ✅
+- [x] Step 1: Tell Claude "Do Fix #1 from the improvement plan"
+- [x] Step 2: Claude will update both files to use absolute paths
+- [x] Step 3: Test by running: `python tools/google/write_to_sheets.py --help`
+- [x] Step 4: If no error, the fix worked ✅
 
 ---
 
@@ -71,12 +71,12 @@ Update it once → both tools use the new version automatically.
 - **Update:** `tools/google/read_from_sheets.py` (import from auth.py)
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #2 from the improvement plan"
-- [ ] Step 2: Claude creates `tools/google/auth.py` with the shared login code
-- [ ] Step 3: Claude updates both tools to import from `auth.py`
-- [ ] Step 4: Test read: `python tools/google/read_from_sheets.py --spreadsheet-id 1HYVpkLb_smXqcKrxPC1n-i1zH7mI-eTwFfi79MgW214 --range "Sheet1!A1:B2"`
-- [ ] Step 5: Test write: run a small write to the sheet
-- [ ] Step 6: If both work, Fix #2 is done ✅
+- [x] Step 1: Tell Claude "Do Fix #2 from the improvement plan"
+- [x] Step 2: Claude creates `tools/google/auth.py` with the shared login code
+- [x] Step 3: Claude updates both tools to import from `auth.py`
+- [x] Step 4: Test read: `python tools/google/read_from_sheets.py --spreadsheet-id 1HYVpkLb_smXqcKrxPC1n-i1zH7mI-eTwFfi79MgW214 --range "Sheet1!A1:B2"`
+- [x] Step 5: Test write: run a small write to the sheet
+- [x] Step 6: If both work, Fix #2 is done ✅
 
 ---
 
@@ -103,10 +103,10 @@ that understands quotes.
 - `mcp_server.py` (line 204, one-line change)
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #3 from the improvement plan"
-- [ ] Step 2: Claude changes `args.split()` to `shlex.split(args)` and adds the import
-- [ ] Step 3: Test by asking Claude to run a tool with a message containing spaces
-- [ ] Step 4: If the message stays intact, Fix #3 is done ✅
+- [x] Step 1: Tell Claude "Do Fix #3 from the improvement plan"
+- [x] Step 2: Claude changes `args.split()` to `shlex.split(args)` and adds the import
+- [x] Step 3: Test by asking Claude to run a tool with a message containing spaces
+- [x] Step 4: If the message stays intact, Fix #3 is done ✅
 
 ---
 
@@ -147,12 +147,12 @@ These are not imported anywhere in the current code:
 - `requirements.txt`
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #4 from the improvement plan"
-- [ ] Step 2: Claude removes the unused packages from `requirements.txt`
-- [ ] Step 3: Claude keeps a comment block at the bottom for packages to add later
-- [ ] Step 4: Verify nothing broke: `python tools/git_agent.py --action list-repos`
-- [ ] Step 5: Verify sheets still work: run a quick read from the sheet
-- [ ] Step 6: If both work, Fix #4 is done ✅
+- [x] Step 1: Tell Claude "Do Fix #4 from the improvement plan"
+- [x] Step 2: Claude removes the unused packages from `requirements.txt`
+- [x] Step 3: Claude keeps a comment block at the bottom for packages to add later
+- [x] Step 4: Verify nothing broke: `python tools/git_agent.py --action list-repos`
+- [x] Step 5: Verify sheets still work: run a quick read from the sheet
+- [x] Step 6: If both work, Fix #4 is done ✅
 
 ---
 
@@ -177,11 +177,11 @@ between attempts. If it fails all 3 times, then show the error.
 - `tools/google/read_from_sheets.py` (the `read_data` function)
 
 ### Steps
-- [ ] Step 1: Complete Fix #2 first (shared auth module makes this easier)
-- [ ] Step 2: Tell Claude "Do Fix #5 from the improvement plan"
-- [ ] Step 3: Claude adds retry logic to both tools
-- [ ] Step 4: Test by running a normal write — it should work on the first try as usual
-- [ ] Step 5: The retry only kicks in during errors, so normal operation is unchanged ✅
+- [x] Step 1: Complete Fix #2 first (shared auth module makes this easier)
+- [x] Step 2: Tell Claude "Do Fix #5 from the improvement plan"
+- [x] Step 3: Claude adds retry logic to both tools
+- [x] Step 4: Test by running a normal write — it should work on the first try as usual
+- [x] Step 5: The retry only kicks in during errors, so normal operation is unchanged ✅
 
 ---
 
@@ -207,10 +207,10 @@ The simple comma format still works — this just adds a smarter option.
 - `tools/google/write_to_sheets.py` (the `main` function)
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #6 from the improvement plan"
-- [ ] Step 2: Claude adds a `--format` flag: `--format csv` (default) or `--format json`
-- [ ] Step 3: Test with a value containing a comma: `--data '[["hello, world","test"]]' --format json`
-- [ ] Step 4: Verify the comma stays inside the cell and doesn't split it ✅
+- [x] Step 1: Tell Claude "Do Fix #6 from the improvement plan"
+- [x] Step 2: Claude adds a `--format` flag: `--format csv` (default) or `--format json`
+- [x] Step 3: Test with a value containing a comma: `--data '[["hello, world","test"]]' --format json`
+- [x] Step 4: Verify the comma stays inside the cell and doesn't split it ✅
 
 ---
 
@@ -230,9 +230,9 @@ newer Claude API features.
 - `requirements.txt` (one line change)
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #7 from the improvement plan"
-- [ ] Step 2: Claude updates `anthropic>=0.8.0` to `anthropic>=0.40.0`
-- [ ] Step 3: Done ✅ (one line change, nothing to test unless you're calling the API directly)
+- [x] Step 1: Tell Claude "Do Fix #7 from the improvement plan"
+- [x] Step 2: Claude updates `anthropic>=0.8.0` to `anthropic>=0.40.0`
+- [x] Step 3: Done ✅ (one line change, nothing to test unless you're calling the API directly)
 
 ---
 
@@ -251,9 +251,9 @@ plain filename (no folder), the code tries to create an empty folder name and cr
 - `tools/google/read_from_sheets.py` (one line)
 
 ### Steps
-- [ ] Step 1: Tell Claude "Do Fix #8 from the improvement plan"
-- [ ] Step 2: Claude adds a one-line guard check
-- [ ] Step 3: Done ✅
+- [x] Step 1: Tell Claude "Do Fix #8 from the improvement plan"
+- [x] Step 2: Claude adds a one-line guard check
+- [x] Step 3: Done ✅
 
 ---
 
@@ -261,13 +261,13 @@ plain filename (no folder), the code tries to create an empty folder name and cr
 
 | Fix | Priority | Difficulty | Est. Time | Status |
 |-----|----------|-----------|-----------|--------|
-| #1 — Absolute token paths | 🔴 High | 🟢 Easy | 5 min | [ ] |
-| #2 — Shared auth module | 🔴 High | 🟡 Medium | 15 min | [ ] |
-| #3 — Fix arg splitter | 🔴 High | 🟢 Easy | 5 min | [ ] |
-| #4 — Trim requirements.txt | 🟡 Medium | 🟢 Easy | 5 min | [ ] |
-| #5 — Retry logic for Sheets | 🟡 Medium | 🟡 Medium | 15 min | [ ] |
-| #6 — Fix comma-in-values bug | 🟡 Medium | 🟡 Medium | 15 min | [ ] |
-| #7 — Update anthropic version | 🟡 Medium | 🟢 Easy | 2 min | [ ] |
-| #8 — Empty path guard | 🟢 Low | 🟢 Easy | 2 min | [ ] |
+| #1 — Absolute token paths | 🔴 High | 🟢 Easy | 5 min | [x] |
+| #2 — Shared auth module | 🔴 High | 🟡 Medium | 15 min | [x] |
+| #3 — Fix arg splitter | 🔴 High | 🟢 Easy | 5 min | [x] |
+| #4 — Trim requirements.txt | 🟡 Medium | 🟢 Easy | 5 min | [x] |
+| #5 — Retry logic for Sheets | 🟡 Medium | 🟡 Medium | 15 min | [x] |
+| #6 — Fix comma-in-values bug | 🟡 Medium | 🟡 Medium | 15 min | [x] |
+| #7 — Update anthropic version | 🟡 Medium | 🟢 Easy | 2 min | [x] |
+| #8 — Empty path guard | 🟢 Low | 🟢 Easy | 2 min | [x] |
 
 **To start any fix:** Just tell Claude "Let's do Fix #[number] from the improvement plan."
