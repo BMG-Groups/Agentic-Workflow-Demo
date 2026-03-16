@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "mcp__wat-framework__write_google_sheet"
+      "mcp__wat-framework__write_google_sheet",
+      "Bash(gh repo:*)"
     ]
   },
   "enabledMcpjsonServers": [
