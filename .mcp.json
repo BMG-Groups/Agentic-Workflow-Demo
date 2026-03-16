@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "wat-framework": {
+      "command": "C:\\Users\\wm119\\.local\\bin\\uv.exe",
+      "args": [
+        "run",
+        "--with", "mcp[cli]",
+        "python",
+        "C:\\Users\\wm119\\OneDrive\\Public\\OneNote Documents\\Agentic Workflow Demo\\mcp_server.py"
+      ],
+      "cwd": "C:\\Users\\wm119\\OneDrive\\Public\\OneNote Documents\\Agentic Workflow Demo"
+    },
+    "n8n": {
+      "url": "https://gimbel.app.n8n.cloud/mcp-test/37562652-009e-444f-9577-427667bbb67e"
+    }
+  }
+}

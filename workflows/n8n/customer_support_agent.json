@@ -1,0 +1,246 @@
+{
+  "name": "Customer Support Agent — Gadgets & More",
+  "nodes": [
+    {
+      "id": "node-001",
+      "name": "Gmail Trigger: Customer Support Inbox",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "filters": {
+          "q": "in:inbox is:unread"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Simplify is ON by default. This outputs Subject, From (as plain string), snippet (body preview), threadId, id. Does NOT output a 'text' field for the body — use 'snippet' instead."
+    },
+    {
+      "id": "node-003",
+      "name": "AI: Classify Support Topic",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [500, 300],
+      "parameters": {
+        "prompt": "={{ 'Subject: ' + ($json['Subject'] || '') + '\\n\\nBody:\\n' + ($json['snippet'] || '').substring(0, 1000) }}",
+        "messages": {}
+      },
+      "notes": "IMPORTANT: After import, open this node, set 'Source for Prompt' to 'Define below', and paste the prompt expression manually. The prompt field does not import reliably. Do NOT add any system messages — leave Chat Messages empty."
+    },
+    {
+      "id": "node-008",
+      "name": "Anthropic Chat Model (Classify)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [500, 500],
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "options": {}
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic account"
+        }
+      },
+      "notes": "IMPORTANT: After import, delete this node and re-add it from the Model* connection point on the AI: Classify Support Topic node canvas. JSON import does not wire sub-node connections reliably. Select whichever model is available on your Anthropic account."
+    },
+    {
+      "id": "node-004",
+      "name": "UTIL: Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.text;\nconst match = raw.match(/\\{[\\s\\S]*?\\}/);\nif (!match) {\n  throw new Error('Could not parse JSON. LLM returned: ' + raw);\n}\nconst parsed = JSON.parse(match[0]);\n\nconst gmailData = $node['Gmail Trigger: Customer Support Inbox'].json;\nconst fromStr = gmailData['From'] || '';\nconst fromEmailMatch = fromStr.match(/<(.+)>/);\nconst fromNameMatch = fromStr.match(/^(.+?)\\s*</);\n\nreturn [{ json: {\n  ...parsed,\n  'From Email': fromEmailMatch ? fromEmailMatch[1] : fromStr,\n  'From Name': fromNameMatch ? fromNameMatch[1].trim() : fromStr,\n  'Subject': gmailData['Subject'] || '',\n  'Body': gmailData['snippet'] || '',\n  'Thread ID': gmailData['threadId'] || '',\n  'Message ID': gmailData['id'] || ''\n}}];"
+      },
+      "notes": "Extracts JSON from LLM response and pulls email fields directly from the Gmail Trigger node. This bypasses the Set node which does not import field assignments reliably."
+    },
+    {
+      "id": "node-005",
+      "name": "UTIL: Route Support Emails",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-is-support",
+              "leftValue": "={{ $json.is_support_topic }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-006",
+      "name": "AI: Draft Customer Reply",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [1250, 180],
+      "parameters": {
+        "prompt": "={{ 'You are a friendly customer support agent for Gadgets & More Electronics. Use only these policies to answer — never invent policies not listed:\\n\\nRETURNS: 30-day window. Free shipping if wrong/defective/damaged. Customer pays for change-of-mind returns. Refund in 5-10 business days. 15% restocking fee on non-defective returns.\\nWARRANTIES: New items: 1-year manufacturer + 30-day GadgetHub guarantee. Refurbished: 90-day only. Void if misused.\\nSHIPPING: Standard 3-7 days (free over $99). Express 1-3 days (extra fee). Tracking within 24 hours.\\nBILLING: Rewards $9.99/month, cancel anytime. Duplicate charges refunded in 48 hours.\\nGIFT CARDS: Never expire. No cash value.\\nPRICING: No price matching after purchase.\\n\\nBe warm, concise (under 200 words), and sign off as \"The Gadgets & More Support Team\".\\n\\nCustomer: ' + $json['From Name'] + '\\nTopic: ' + $json['topic'] + '\\nEmail: ' + $json['Body'] }}",
+        "messages": {}
+      },
+      "notes": "IMPORTANT: After import, open this node, set 'Source for Prompt' to 'Define below', and paste the combined prompt manually. Do NOT add any system messages to Chat Messages — this causes 'System messages only permitted as first message' error. Put everything (instructions + policy + customer data) into the single prompt field."
+    },
+    {
+      "id": "node-009",
+      "name": "Anthropic Chat Model (Draft)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [1250, 400],
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "options": {}
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic account"
+        }
+      },
+      "notes": "IMPORTANT: After import, delete this node and re-add it from the Model* connection point on the AI: Draft Customer Reply node on the canvas. JSON import does not wire sub-node connections reliably."
+    },
+    {
+      "id": "node-007",
+      "name": "Gmail: Create Draft Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1500, 180],
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "toList": "={{ $node['UTIL: Parse Classification'].json['From Email'] }}",
+        "subject": "=Re: {{ $node['UTIL: Parse Classification'].json['Subject'] }}",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "threadId": "={{ $node['UTIL: Parse Classification'].json['Thread ID'] }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger: Customer Support Inbox": {
+      "main": [
+        [
+          {
+            "node": "AI: Classify Support Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model (Classify)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Classify Support Topic",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Classify Support Topic": {
+      "main": [
+        [
+          {
+            "node": "UTIL: Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UTIL: Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "UTIL: Route Support Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UTIL: Route Support Emails": {
+      "main": [
+        [
+          {
+            "node": "AI: Draft Customer Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Anthropic Chat Model (Draft)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Draft Customer Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Draft Customer Reply": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Create Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
