@@ -12,6 +12,7 @@ Model Context Protocol, enabling AI assistants to:
 
 import os
 import sys
+import shlex
 import subprocess
 import glob
 from pathlib import Path
@@ -201,7 +202,7 @@ def run_tool(tool_path: str, args: str = "") -> str:
 
     cmd = [sys.executable, str(script)]
     if args:
-        cmd.extend(args.split())
+        cmd.extend(shlex.split(args))
 
     result = subprocess.run(
         cmd,

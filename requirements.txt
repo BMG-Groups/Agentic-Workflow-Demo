@@ -3,9 +3,6 @@ python-dotenv>=1.0.0          # Environment variable management
 
 # HTTP and Web
 requests>=2.31.0              # HTTP requests
-beautifulsoup4>=4.12.0        # HTML parsing
-lxml>=4.9.0                   # XML/HTML parser
-selenium>=4.15.0              # Browser automation
 
 # Google Workspace APIs
 google-auth>=2.25.0
@@ -13,27 +10,26 @@ google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
 google-api-python-client>=2.110.0
 
-# Data Processing
-pandas>=2.1.0                 # Data manipulation
-openpyxl>=3.1.0              # Excel file handling
-numpy>=1.26.0                # Numerical operations
-
 # AI/ML APIs
-openai>=1.6.0                # OpenAI API client
-anthropic>=0.8.0             # Anthropic API client
-
-# Utilities
-pytz>=2023.3                 # Timezone handling
-python-dateutil>=2.8.2       # Date utilities
-jsonschema>=4.20.0           # JSON validation
-pyyaml>=6.0.1                # YAML parsing
+anthropic>=0.40.0            # Anthropic API client
 
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
 
-# Logging
-colorlog>=6.8.0              # Colored logging output
-
 # MCP Server
 mcp[cli]>=1.0.0              # Model Context Protocol server SDK
+
+# --- Add packages here when needed (not before) ---
+# selenium>=4.15.0            # Browser automation (web scraping tools)
+# beautifulsoup4>=4.12.0      # HTML parsing (web scraping tools)
+# lxml>=4.9.0                 # XML/HTML parser (web scraping tools)
+# pandas>=2.1.0               # Data tables (data processing tools)
+# numpy>=1.26.0               # Numerical operations (data processing tools)
+# openpyxl>=3.1.0             # Excel file handling
+# pytz>=2023.3                # Timezone handling
+# python-dateutil>=2.8.2      # Date parsing utilities
+# jsonschema>=4.20.0          # JSON validation
+# pyyaml>=6.0.1               # YAML file parsing
+# colorlog>=6.8.0             # Colored terminal output
+# openai>=1.6.0               # OpenAI API (if needed alongside Anthropic)

@@ -11,57 +11,17 @@ import argparse
 import logging
 import csv
 from pathlib import Path
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from dotenv import load_dotenv
 
-# Add parent directory to path for imports
+# Ensure project root is on path so auth module can be imported when run as a script
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from tools.google.auth import get_sheets_service, call_with_retry, SCOPES_READ
 from tools.utils.common import ensure_tmp_dir
 
+from dotenv import load_dotenv
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-
-
-def get_sheets_service():
-    """
-    Authenticate and return Google Sheets service.
-
-    Returns:
-        Google Sheets API service object
-    """
-    creds = None
-
-    # Token file stores user's access and refresh tokens
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-
-    # If no valid credentials, let user log in
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists('credentials.json'):
-                logger.error("credentials.json not found. Please download it from Google Cloud Console.")
-                logger.error("See README.md for setup instructions.")
-                sys.exit(1)
-
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-
-        # Save credentials for next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    return build('sheets', 'v4', credentials=creds)
 
 
 def read_data(spreadsheet_id, range_name, output_path):
@@ -77,14 +37,15 @@ def read_data(spreadsheet_id, range_name, output_path):
         bool: True if successful
     """
     try:
-        service = get_sheets_service()
+        service = get_sheets_service(SCOPES_READ)
 
-        # Read data
-        result = service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range=range_name
-        ).execute()
+        def _call():
+            return service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=range_name
+            ).execute()
 
+        result = call_with_retry(_call)
         values = result.get('values', [])
 
         if not values:
@@ -93,7 +54,9 @@ def read_data(spreadsheet_id, range_name, output_path):
 
         # Ensure output directory exists
         ensure_tmp_dir()
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        output_dir = os.path.dirname(output_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
 
         # Write to CSV
         with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
