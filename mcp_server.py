@@ -18,9 +18,11 @@ import glob
 from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
-# Git agent — imported once at startup for use by the git_* MCP tools below
+# Git agent and Google Sheets tools — imported once at startup
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
 import git_agent
+from tools.google.write_to_sheets import write_data as _sheets_write
+from tools.google.read_from_sheets import read_data as _sheets_read
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.resolve()
@@ -97,6 +99,7 @@ def run_example_tool(input_text: str, output_path: str = ".tmp/output.txt") -> s
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
+        timeout=60,
     )
 
     output = ""
@@ -122,27 +125,11 @@ def read_google_sheet(
         range: The range in A1 notation (e.g., 'Sheet1!A:Z').
         output: Where to save the CSV file (default: .tmp/sheet_data.csv).
     """
-    script = PROJECT_ROOT / "tools" / "google" / "read_from_sheets.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script),
-            "--spreadsheet-id", spreadsheet_id,
-            "--range", range,
-            "--output", output,
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(PROJECT_ROOT),
-    )
-
-    output_text = ""
-    if result.stdout:
-        output_text += f"STDOUT:\n{result.stdout}\n"
-    if result.stderr:
-        output_text += f"STDERR:\n{result.stderr}\n"
-    output_text += f"Exit code: {result.returncode}"
-    return output_text
+    try:
+        success = _sheets_read(spreadsheet_id, range, output)
+        return f"Read complete. Data saved to {output}" if success else "Read failed — no data found in range."
+    except Exception as exc:
+        return f"Error reading sheet: {exc}"
 
 
 @mcp.tool()
@@ -157,29 +144,19 @@ def write_google_sheet(
     Args:
         spreadsheet_id: The Google Sheets spreadsheet ID (from the URL).
         range: The range in A1 notation (e.g., 'Sheet1!A1').
-        data: Semicolon-separated rows with comma-separated values (e.g., "A1,B1;A2,B2").
+        data: Semicolon-separated rows with comma-separated values (e.g., "A1,B1;A2,B2"),
+              or a JSON 2D array (e.g., '[["hello, world","test"]]') when values contain commas.
     """
-    script = PROJECT_ROOT / "tools" / "google" / "write_to_sheets.py"
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(script),
-            "--spreadsheet-id", spreadsheet_id,
-            "--range", range,
-            "--data", data,
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(PROJECT_ROOT),
-    )
-
-    output_text = ""
-    if result.stdout:
-        output_text += f"STDOUT:\n{result.stdout}\n"
-    if result.stderr:
-        output_text += f"STDERR:\n{result.stderr}\n"
-    output_text += f"Exit code: {result.returncode}"
-    return output_text
+    import json as _json
+    try:
+        values = _json.loads(data)
+    except (_json.JSONDecodeError, ValueError):
+        values = [row.split(',') for row in data.split(';')]
+    try:
+        success = _sheets_write(spreadsheet_id, range, values)
+        return "Write complete." if success else "Write failed — check logs."
+    except Exception as exc:
+        return f"Error writing sheet: {exc}"
 
 
 @mcp.tool()
@@ -209,6 +186,7 @@ def run_tool(tool_path: str, args: str = "") -> str:
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
+        timeout=60,
     )
 
     output_text = ""

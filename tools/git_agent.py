@@ -23,6 +23,8 @@ import subprocess
 import argparse
 import logging
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -45,10 +47,9 @@ logger = logging.getLogger(__name__)
 
 # VS Code stores recently opened workspaces here on Windows
 VSCODE_STORAGE = Path(
-    os.environ.get(
-        "VSCODE_STORAGE_PATH",
-        r"C:\Users\wm119\AppData\Roaming\Code\User\globalStorage\storage.json",
-    )
+    os.environ.get("VSCODE_STORAGE_PATH")
+    or Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+    / "Code" / "User" / "globalStorage" / "storage.json"
 )
 
 
@@ -222,8 +223,8 @@ def _has_remotes(repo_path: str) -> bool:
 # Activity logging (appends a row to Google Sheets after every write op)
 # ---------------------------------------------------------------------------
 
-def git_log_entry(repo_name: str, branch: str, action: str, message: str, result: str) -> None:
-    """Append one row to the Git Activity Log Google Sheet. Fails silently."""
+def _write_log_entry(repo_name: str, branch: str, action: str, message: str, result: str) -> None:
+    """Internal: write one row to the activity log sheet. Runs in background thread."""
     sheet_id = os.environ.get("GIT_LOG_SHEET_ID", "")
     if not sheet_id:
         logger.warning("GIT_LOG_SHEET_ID not set — activity log skipped.")
@@ -244,6 +245,15 @@ def git_log_entry(repo_name: str, branch: str, action: str, message: str, result
         logger.info("Activity log: %s on %s/%s → %s", action, repo_name, branch, result)
     except Exception as exc:
         logger.warning("Activity log failed (non-fatal): %s", exc)
+
+
+def git_log_entry(repo_name: str, branch: str, action: str, message: str, result: str) -> None:
+    """Append one row to the Git Activity Log Google Sheet. Non-blocking — runs in background."""
+    threading.Thread(
+        target=_write_log_entry,
+        args=(repo_name, branch, action, message, result),
+        daemon=True,
+    ).start()
 
 
 # ---------------------------------------------------------------------------
@@ -303,7 +313,7 @@ def git_push(repo_path: str, remote: str = "origin", branch: str = "") -> str:
         )
     if not branch:
         branch = _current_branch(repo_path)
-    r = _run_git(repo_path, ["push", remote, branch])
+    r = _run_git(repo_path, ["push", "-u", remote, branch])
     result_str = "✅ success" if r["success"] else f"❌ failed: {r['stderr'][:80]}"
     git_log_entry(Path(repo_path).name, branch, "push", f"push to {remote}/{branch}", result_str)
     return _fmt(r, f"Push {branch} -> {remote}:")
@@ -336,14 +346,14 @@ def git_branch(repo_path: str, action: str, name: str = "") -> str:
     elif action == "create":
         if not name:
             return "Error: --name is required for branch create."
-        r = _run_git(repo_path, ["checkout", "-b", name])
+        r = _run_git(repo_path, ["switch", "-c", name])
         result_str = "✅ success" if r["success"] else f"❌ failed: {r['stderr'][:80]}"
         git_log_entry(Path(repo_path).name, name, "branch_create", f"create {name}", result_str)
         return _fmt(r, f"Created and switched to branch '{name}':")
     elif action == "switch":
         if not name:
             return "Error: --name is required for branch switch."
-        r = _run_git(repo_path, ["checkout", name])
+        r = _run_git(repo_path, ["switch", name])
         return _fmt(r, f"Switched to branch '{name}':")
     elif action == "delete":
         if not name:
@@ -360,23 +370,31 @@ def git_branch(repo_path: str, action: str, name: str = "") -> str:
 # Extended git operations (Phase 1 enhancements + Phase 2 new capabilities)
 # ---------------------------------------------------------------------------
 
+def _check_single_repo(r: dict) -> str:
+    """Check one repo's status. Called in parallel by check_all_repos."""
+    status = _run_git(r["path"], ["status", "--short"])
+    branch = _current_branch(r["path"])
+    has_changes = bool(status["stdout"].strip())
+    label = "CHANGES PENDING" if has_changes else "clean"
+    lines = [f"  [{label}]  {r['name']}  (branch: {branch})"]
+    if has_changes:
+        for line in status["stdout"].strip().splitlines():
+            lines.append(f"             {line}")
+    return "\n".join(lines)
+
+
 def check_all_repos() -> str:
     """Scan every VS Code repo and report which ones have uncommitted changes."""
     repos = discover_repos()
     if not repos:
         return "No repositories found."
+    git_repos = [r for r in repos if r["is_git"]]
+    if not git_repos:
+        return "No git repositories found."
     lines = ["Repository scan:\n"]
-    for r in repos:
-        if not r["is_git"]:
-            continue
-        status = _run_git(r["path"], ["status", "--short"])
-        branch = _current_branch(r["path"])
-        has_changes = bool(status["stdout"].strip())
-        label = "CHANGES PENDING" if has_changes else "clean"
-        lines.append(f"  [{label}]  {r['name']}  (branch: {branch})")
-        if has_changes:
-            for line in status["stdout"].strip().splitlines():
-                lines.append(f"             {line}")
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(_check_single_repo, git_repos))
+    lines.extend(results)
     return "\n".join(lines)
 
 
@@ -412,7 +430,7 @@ def git_smart_sync(repo_path: str, commit_message: str,
         )
         return "\n".join(log)
 
-    push_result = _run_git(repo_path, ["push", remote, cur_branch])
+    push_result = _run_git(repo_path, ["push", "-u", remote, cur_branch])
     if push_result["returncode"] != 0:
         git_log_entry(repo_name, cur_branch, "smart_sync", commit_message,
                       f"❌ push failed: {push_result['stderr'][:80]}")
@@ -505,7 +523,7 @@ def git_generate_message(repo_path: str) -> str:
     if unstaged_out:
         parts.append(f"=== UNSTAGED CHANGES ===\n{unstaged_out}")
     diff_text = "\n\n".join(parts)
-    MAX_CHARS = 3000
+    MAX_CHARS = 20_000
     if len(diff_text) > MAX_CHARS:
         diff_text = diff_text[:MAX_CHARS] + f"\n\n... (truncated — {len(diff_text) - MAX_CHARS} chars omitted)"
     return (

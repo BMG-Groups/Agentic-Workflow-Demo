@@ -1,9 +1,6 @@
 # Core Dependencies
 python-dotenv>=1.0.0          # Environment variable management
 
-# HTTP and Web
-requests>=2.31.0              # HTTP requests
-
 # Google Workspace APIs
 google-auth>=2.25.0
 google-auth-oauthlib>=1.2.0

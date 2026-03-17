@@ -6,7 +6,6 @@ Both read_from_sheets.py and write_to_sheets.py import from here.
 Centralising auth means: update once, both tools benefit automatically.
 """
 
-import sys
 import time
 import logging
 from pathlib import Path
@@ -50,9 +49,10 @@ def get_sheets_service(scopes=None):
             creds.refresh(Request())
         else:
             if not CREDENTIALS_PATH.exists():
-                logger.error(f"credentials.json not found at {CREDENTIALS_PATH}")
-                logger.error("Please download it from Google Cloud Console.")
-                sys.exit(1)
+                raise FileNotFoundError(
+                    f"credentials.json not found at {CREDENTIALS_PATH}. "
+                    "Download it from Google Cloud Console and place it in the project root."
+                )
 
             flow = InstalledAppFlow.from_client_secrets_file(
                 str(CREDENTIALS_PATH), scopes
