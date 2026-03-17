@@ -237,7 +237,7 @@ def _write_log_entry(repo_name: str, branch: str, action: str, message: str, res
         service = get_sheets_service()
         service.spreadsheets().values().append(
             spreadsheetId=sheet_id,
-            range="Sheet1!A:F",
+            range="Activity Log!A:F",
             valueInputOption="RAW",
             insertDataOption="INSERT_ROWS",
             body={"values": row},
